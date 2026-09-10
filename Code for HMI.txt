@@ -1,0 +1,57 @@
+[Unit]
+Description=Deterministic LVGL Industrial HMI MVP Engine
+After=network.target graphical.target
+
+[Service]
+Type=simple
+User=ras
+Environment=DISPLAY=:0
+WorkingDirectory=/home/ras/lv_port_linux_frame_buffer/build
+ExecStart=/home/ras/lv_port_linux_frame_buffer/build/bin/lvglsim
+Restart=always
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=50
+
+[Install]
+WantedBy=graphical.target
+
+#!/bin/bash
+while true; do
+    clear
+    echo "=== DETERMINISTIC HMI SCHEDULING TELEMETRY ==="
+    echo "Time: $(date +'%T')"
+    echo "--------------------------------------------------"
+    PID=$(pgrep lvglsim)
+    if [ -n "$PID" ]; then
+        echo "[+] Status: ACTIVE"
+        echo "[+] Process ID (PID): $PID"
+        sudo chrt -p $PID
+        echo "--------------------------------------------------"
+        ps -eo pid,psr,ni,rtprio,stat,comm | grep -E "PID|lvglsim"
+    else
+        echo "[-] Status: WAITING FOR lvglsim PROCESS..."
+    fi
+    sleep 1
+done
+
+cd ~/lv_port_linux_frame_buffer/build
+cmake ..
+make -j4
+ls -la bin/lvglsim
+
+sudo systemctl daemon-reload
+sudo systemctl enable lvgl-hmi.service
+sudo systemctl restart lvgl-hmi.service
+sudo systemctl status lvgl-hmi.service
+
+chmod +x rt_status.sh
+./rt_status.sh
+
+sudo apt install stress-ng -y
+sudo stress-ng --cpu 4 --timeout 30s
+
+sudo fallocate -l 2G /dev/shm/ram_spike
+free -h
+sudo rm -f /dev/shm/ram_spike
+
+top -b -n 1 -p $(pgrep lvglsim)
