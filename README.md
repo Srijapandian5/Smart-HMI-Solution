@@ -1,0 +1,1 @@
+A deterministic, high-reliability industrial HMI built on Raspberry Pi 5 using the LVGL headless engine. Running as a custom systemd service (lvgl-hmi.service), the system undergoes rigorous CPU (stress-ng) and memory (fallocate) stress testing to ensure fault-resilient execution under heavy loads.
